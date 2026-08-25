@@ -218,6 +218,7 @@ renderer.setAnimationLoop(() => {
       resolveTimer += dt
       hud.setResolve(Math.max(0, 1 - resolveTimer / MAX_RESOLVE))
       const standingNow = crateField.countStanding()
+      if (standingNow < prevStanding) effects.shake(0.15)
       if (standingNow === 0 && prevStanding > 0) {
         slowmoTimer = 1.2
         timeScale = 0.3

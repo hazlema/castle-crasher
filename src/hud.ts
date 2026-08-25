@@ -13,7 +13,11 @@ const MAX_TOASTS = 4
 function dismiss(t: HTMLElement) {
   if (t.classList.contains('out')) return
   t.classList.add('out')
-  t.addEventListener('animationend', () => t.remove(), { once: true })
+  t.addEventListener('animationend', function onEnd(e) {
+    if (e.animationName !== 'toast-out') return
+    t.removeEventListener('animationend', onEnd)
+    t.remove()
+  })
 }
 
 export const hud = {
