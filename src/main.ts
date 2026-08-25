@@ -45,6 +45,7 @@ let resolveTimer = 0
 let feedbackTimer = 0
 let onContinue: (() => void) | null = null
 let nextShot: ShotModifiers = {}
+let tutorialShown = false
 
 function updatePowerUpHud() {
   const active: string[] = []
@@ -62,8 +63,9 @@ function loadLevel(i: number) {
   crateField.spawn(level.crates, level.specialCrates)
   hud.setLevel(i + 1)
   hud.setShots(shotsLeft)
-  hud.hideToast()
-  hud.setTimer(null)
+  hud.clearToasts()
+  hud.hideBanner()
+  hud.setResolve(null)
   state = 'aiming'
 }
 
@@ -82,7 +84,7 @@ function finishShotResolution() {
   crateField.clearHitFeedback()
   projectiles.clear()
   trebuchet.reset()
-  hud.hideToast()
+  hud.clearToasts()
   state = 'aiming'
 }
 
@@ -93,42 +95,40 @@ function showShotFeedback() {
   applyPowerUps(result.powerUps)
   crateField.showHitFeedback()
 
-  const crateText = `Crates hit: ${result.hitCount}`
-  const colorKey = 'Red = knocked down  •  Green = still standing'
-  const rewardText = result.powerUps.length > 0
-    ? `Power-up: ${result.powerUps.map((p) => POWER_UP_LABELS[p]).join(' + ')}`
-    : 'No power-up this shot'
-
-  const standing = crateField.countStanding()
-  let outcomeText = ''
-  let next: (() => void) | null = null
-  if (standing === 0) {
-    if (levelIndex + 1 >= LEVELS.length) {
-      outcomeText = 'You conquered the castle!'
-      sfx.fanfare()
-      next = () => loadLevel(0)
-    } else {
-      outcomeText = 'Level cleared!'
-      sfx.fanfare()
-      next = () => loadLevel(levelIndex + 1)
-    }
-  } else if (shotsLeft === 0) {
-    outcomeText = 'Out of shots — retry!'
-    sfx.defeat()
-    next = () => loadLevel(levelIndex)
+  hud.setResolve(null)
+  hud.toast(`Crates hit: %d`, { type: result.hitCount > 0 ? 'success'
+    : 'info', countTo: result.hitCount })
+  if (!tutorialShown) {
+    tutorialShown = true
+    hud.toast('Red = knocked down  •  Green = still standing',
+      { type: 'info', duration: 6 })
+  }
+  if (result.powerUps.length > 0) {
+    hud.toast(`Power-up: ${result.powerUps
+      .map((p) => POWER_UP_LABELS[p]).join(' + ')}`, { type: 'reward' })
   }
 
-  const lines = [crateText, colorKey, rewardText]
-  if (next) {
-    lines.push('', `${outcomeText}  — press ENTER`)
-    onContinue = next
+  const standing = crateField.countStanding()
+  if (standing === 0) {
+    if (levelIndex + 1 >= LEVELS.length) {
+      hud.banner('CASTLE CONQUERED!', 'press ENTER to play again')
+      sfx.fanfare()
+      onContinue = () => loadLevel(0)
+    } else {
+      hud.banner('LEVEL CLEARED!', 'press ENTER for the next level')
+      sfx.fanfare()
+      onContinue = () => loadLevel(levelIndex + 1)
+    }
+    state = 'transition'
+  } else if (shotsLeft === 0) {
+    hud.banner('OUT OF SHOTS', 'press ENTER to retry')
+    sfx.defeat()
+    onContinue = () => loadLevel(levelIndex)
     state = 'transition'
   } else {
     feedbackTimer = 0
     state = 'feedback'
   }
-  hud.setTimer(null)
-  hud.showToast(lines.join('\n'))
 }
 
 loadLevel(0)
@@ -178,7 +178,7 @@ renderer.setAnimationLoop(() => {
 
     case 'resolving':
       resolveTimer += dt
-      hud.setTimer(Math.max(0, MAX_RESOLVE - resolveTimer))
+      hud.setResolve(Math.max(0, 1 - resolveTimer / MAX_RESOLVE))
       if (
         resolveTimer > MAX_RESOLVE ||
         (resolveTimer > MIN_RESOLVE &&
@@ -197,6 +197,7 @@ renderer.setAnimationLoop(() => {
 
     case 'transition':
       if (input.wasPressed('Enter')) {
+        hud.hideBanner()
         onContinue?.()
         onContinue = null
       }
