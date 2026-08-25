@@ -43,7 +43,6 @@ export const hud = {
     ToastOpts = {}) {
     const box = el('toasts')
     while (box.children.length >= MAX_TOASTS) {
-      dismiss(box.children[0] as HTMLElement)
       box.children[0].remove()
     }
     const t = document.createElement('div')
