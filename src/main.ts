@@ -200,7 +200,7 @@ renderer.setAnimationLoop(() => {
       }
       break
 
-    case 'resolving':
+    case 'resolving': {
       resolveTimer += dt
       hud.setResolve(Math.max(0, 1 - resolveTimer / MAX_RESOLVE))
       const standingNow = crateField.countStanding()
@@ -219,6 +219,7 @@ renderer.setAnimationLoop(() => {
         showShotFeedback()
       }
       break
+    }
 
     case 'feedback':
       feedbackTimer += dt
