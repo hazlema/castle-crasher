@@ -39,6 +39,17 @@ const projectiles = new ProjectileManager(scene, physics)
 const crateField = new CrateField(scene, physics)
 const effects = new Effects(scene, camera)
 
+let groundHitThisShot = false
+projectiles.onImpact = (pos, speed, isGround) => {
+  sfx.impact(speed / 12)
+  effects.shake(Math.min(0.5, speed / 30))
+  if (isGround && !groundHitThisShot) {
+    groundHitThisShot = true
+    effects.landingDust(pos)
+  }
+  if (!isGround && speed > 4) effects.splinters(pos)
+}
+
 let state: State = 'aiming'
 let levelIndex = 0
 let shotsLeft = 0
@@ -157,6 +168,7 @@ renderer.setAnimationLoop(() => {
         sfx.chargeEnd()
         sfx.launch()
         crateField.beginShot()
+        groundHitThisShot = false
         shotsLeft -= 1
         hud.setShots(shotsLeft)
         const modifiers = { ...nextShot }
@@ -216,6 +228,8 @@ renderer.setAnimationLoop(() => {
   trebuchet.update(dt)
   physics.step(dt)
   projectiles.update(dt)
+  const ballPos = projectiles.position
+  if (ballPos) effects.trail(ballPos, dt, projectiles.speed)
   effects.update(dt)
   renderer.render(scene, camera)
   input.endFrame()

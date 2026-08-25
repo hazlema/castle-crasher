@@ -26,11 +26,34 @@ interface Cloud {
   speed: number
 }
 
+interface Particle {
+  sprite: THREE.Sprite
+  vel: THREE.Vector3
+  age: number
+  life: number
+  grow: number
+  baseOpacity: number
+}
+
+interface Shard {
+  mesh: THREE.Mesh
+  vel: THREE.Vector3
+  spin: THREE.Vector3
+  age: number
+  life: number
+}
+
 export class Effects {
   private softTex = makeSoftTexture()
   private clouds: Cloud[] = []
   private trauma = 0
   private cameraBase: THREE.Vector3
+  private particles: Particle[] = []
+  private shards: Shard[] = []
+  private shardMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8a6a42, transparent: true })
+  private shardGeometry = new THREE.BoxGeometry(0.22, 0.1, 0.34)
+  private trailTimer = 0
 
   constructor(
     private scene: THREE.Scene,
@@ -72,6 +95,59 @@ export class Effects {
     this.clouds.push({ group, speed: 0.4 + Math.random() * 0.7 })
   }
 
+  puff(pos: THREE.Vector3, { color = 0xcbb794, size = 1,
+    vel = new THREE.Vector3(), life = 0.8 }: { color?: number,
+    size?: number, vel?: THREE.Vector3, life?: number } = {}) {
+    const mat = new THREE.SpriteMaterial({
+      map: this.softTex, color, transparent: true, opacity: 0.55,
+      depthWrite: false,
+    })
+    const sprite = new THREE.Sprite(mat)
+    sprite.scale.setScalar(size)
+    sprite.position.copy(pos)
+    this.scene.add(sprite)
+    this.particles.push({ sprite, vel: vel.clone(), age: 0, life,
+      grow: size * 1.6, baseOpacity: 0.55 })
+  }
+
+  // Call every frame with the projectile position; emits ~every 40ms.
+  trail(pos: THREE.Vector3, dt: number, speed: number) {
+    if (speed < 5) return
+    this.trailTimer += dt
+    if (this.trailTimer < 0.04) return
+    this.trailTimer = 0
+    this.puff(pos, { color: 0xdedede, size: 0.7, life: 0.8 })
+  }
+
+  landingDust(pos: THREE.Vector3) {
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2
+      this.puff(new THREE.Vector3(pos.x, 0.3, pos.z), {
+        size: 1.1,
+        life: 1.4,
+        vel: new THREE.Vector3(Math.cos(a) * 3, 1.2, Math.sin(a) * 3),
+      })
+    }
+  }
+
+  splinters(pos: THREE.Vector3, count = 6) {
+    for (let i = 0; i < count; i++) {
+      const mesh = new THREE.Mesh(this.shardGeometry,
+        this.shardMaterial.clone())
+      mesh.position.copy(pos)
+      this.scene.add(mesh)
+      this.shards.push({
+        mesh,
+        vel: new THREE.Vector3((Math.random() - 0.5) * 6,
+          2 + Math.random() * 4, (Math.random() - 0.5) * 6),
+        spin: new THREE.Vector3(Math.random() * 8, Math.random() * 8,
+          Math.random() * 8),
+        age: 0,
+        life: 1,
+      })
+    }
+  }
+
   shake(strength: number) {
     this.trauma = Math.min(1.5, this.trauma + strength)
   }
@@ -91,5 +167,40 @@ export class Effects {
       this.cameraBase.y + (Math.random() - 0.5) * amplitude,
       this.cameraBase.z + (Math.random() - 0.5) * amplitude,
     )
+
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i]
+      p.age += dt
+      const t = p.age / p.life
+      if (t >= 1) {
+        this.scene.remove(p.sprite)
+        p.sprite.material.dispose()
+        this.particles.splice(i, 1)
+        continue
+      }
+      p.vel.multiplyScalar(1 - dt * 1.5) // drag
+      p.sprite.position.addScaledVector(p.vel, dt)
+      p.sprite.scale.setScalar(
+        p.sprite.scale.x + p.grow * dt)
+      p.sprite.material.opacity = p.baseOpacity * (1 - t)
+    }
+
+    for (let i = this.shards.length - 1; i >= 0; i--) {
+      const s = this.shards[i]
+      s.age += dt
+      if (s.age >= s.life) {
+        this.scene.remove(s.mesh)
+        ;(s.mesh.material as THREE.Material).dispose()
+        this.shards.splice(i, 1)
+        continue
+      }
+      s.vel.y -= 9.82 * dt
+      s.mesh.position.addScaledVector(s.vel, dt)
+      s.mesh.rotation.x += s.spin.x * dt
+      s.mesh.rotation.y += s.spin.y * dt
+      s.mesh.rotation.z += s.spin.z * dt
+      ;(s.mesh.material as THREE.MeshStandardMaterial).opacity =
+        1 - s.age / s.life
+    }
   }
 }

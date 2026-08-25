@@ -16,6 +16,8 @@ export class ProjectileManager {
   private mesh: THREE.Mesh | null = null
   private body: CANNON.Body | null = null
   private blastEffects: BlastEffect[] = []
+  onImpact: ((pos: THREE.Vector3, speed: number, isGround: boolean) => void)
+    | null = null
 
   constructor(
     private scene: THREE.Scene,
@@ -43,6 +45,17 @@ export class ProjectileManager {
     this.body.allowSleep = true
     this.body.sleepSpeedLimit = 0.3
     this.physics.track(this.mesh, this.body)
+
+    this.body.addEventListener('collide',
+      (e: { body: CANNON.Body, contact: { getImpactVelocityAlongNormal(): number } }) => {
+        if (!this.body) return
+        this.onImpact?.(
+          new THREE.Vector3(this.body.position.x, this.body.position.y,
+            this.body.position.z),
+          Math.abs(e.contact.getImpactVelocityAlongNormal()),
+          e.body === this.physics.ground,
+        )
+      })
 
     if (modifiers.blast) {
       let exploded = false
@@ -111,5 +124,9 @@ export class ProjectileManager {
 
   get speed() {
     return this.body ? this.body.velocity.length() : 0
+  }
+
+  get position(): THREE.Vector3 | null {
+    return this.mesh ? this.mesh.position : null
   }
 }
