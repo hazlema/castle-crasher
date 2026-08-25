@@ -8,6 +8,7 @@ import { LEVELS } from './levels'
 import { hud } from './hud'
 import { input } from './input'
 import { AimMarker } from './aim-marker'
+import { sfx } from './sfx'
 import {
   POWER_UP_LABELS,
   type PowerUpType,
@@ -66,6 +67,7 @@ function loadLevel(i: number) {
 }
 
 function applyPowerUps(powerUps: PowerUpType[]) {
+  if (powerUps.length > 0) sfx.reward()
   for (const powerUp of powerUps) {
     if (powerUp === 'extra-shot') shotsLeft += 1
     if (powerUp === 'blast-shot') nextShot.blast = true
@@ -102,13 +104,16 @@ function showShotFeedback() {
   if (standing === 0) {
     if (levelIndex + 1 >= LEVELS.length) {
       outcomeText = 'You conquered the castle!'
+      sfx.fanfare()
       next = () => loadLevel(0)
     } else {
       outcomeText = 'Level cleared!'
+      sfx.fanfare()
       next = () => loadLevel(levelIndex + 1)
     }
   } else if (shotsLeft === 0) {
     outcomeText = 'Out of shots — retry!'
+    sfx.defeat()
     next = () => loadLevel(levelIndex)
   }
 
@@ -143,7 +148,10 @@ renderer.setAnimationLoop(() => {
 
     case 'charging':
       charge = Math.min(1, charge + dt / CHARGE_TIME)
+      sfx.charge(charge)
       if (input.wasReleased('Space')) {
+        sfx.chargeEnd()
+        sfx.launch()
         crateField.beginShot()
         shotsLeft -= 1
         hud.setShots(shotsLeft)
