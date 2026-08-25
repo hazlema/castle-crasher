@@ -8,8 +8,12 @@ import { LEVELS } from './levels'
 import { hud } from './hud'
 import { input } from './input'
 import { AimMarker } from './aim-marker'
+import { sfx } from './sfx'
+import { startMusic } from './music'
+import { Effects } from './effects'
 import {
   POWER_UP_LABELS,
+  POWER_UP_SHORT,
   type PowerUpType,
   type ShotModifiers,
 } from './powerups'
@@ -34,6 +38,22 @@ scene.add(trebuchet.group)
 const aimMarker = new AimMarker(scene)
 const projectiles = new ProjectileManager(scene, physics)
 const crateField = new CrateField(scene, physics)
+const effects = new Effects(scene, camera)
+
+let groundHitThisShot = false
+projectiles.onImpact = (pos, speed, isGround) => {
+  sfx.impact(speed / 12)
+  effects.shake(Math.min(0.5, speed / 30))
+  if (isGround && !groundHitThisShot) {
+    groundHitThisShot = true
+    effects.landingDust(pos)
+  }
+  if (!isGround && speed > 4) effects.splinters(pos)
+}
+projectiles.onBlast = (pos) => {
+  sfx.blast()
+  effects.blastFx(pos)
+}
 
 let state: State = 'aiming'
 let levelIndex = 0
@@ -43,11 +63,17 @@ let resolveTimer = 0
 let feedbackTimer = 0
 let onContinue: (() => void) | null = null
 let nextShot: ShotModifiers = {}
+let tutorialShown = false
+let timeScale = 1
+let slowmoTimer = 0
+let prevStanding = 0
 
 function updatePowerUpHud() {
   const active: string[] = []
   if (nextShot.blast) active.push('Blast')
   if (nextShot.heavy) active.push('Heavy')
+  if (nextShot.multi) active.push('Multi')
+  if (nextShot.bouncy) active.push('Bouncy')
   hud.setPowerUps(active.length > 0 ? `Next: ${active.join(' + ')}` : '')
 }
 
@@ -58,18 +84,25 @@ function loadLevel(i: number) {
   projectiles.clear()
   trebuchet.reset()
   crateField.spawn(level.crates, level.specialCrates)
+  prevStanding = crateField.countStanding()
+  timeScale = 1
+  slowmoTimer = 0
   hud.setLevel(i + 1)
   hud.setShots(shotsLeft)
-  hud.hideToast()
-  hud.setTimer(null)
+  hud.clearToasts()
+  hud.hideBanner()
+  hud.setResolve(null)
   state = 'aiming'
 }
 
 function applyPowerUps(powerUps: PowerUpType[]) {
+  if (powerUps.length > 0) sfx.reward()
   for (const powerUp of powerUps) {
     if (powerUp === 'extra-shot') shotsLeft += 1
     if (powerUp === 'blast-shot') nextShot.blast = true
     if (powerUp === 'heavy-shot') nextShot.heavy = true
+    if (powerUp === 'multi-shot') nextShot.multi = true
+    if (powerUp === 'bouncy-shot') nextShot.bouncy = true
   }
   hud.setShots(shotsLeft)
   updatePowerUpHud()
@@ -79,7 +112,7 @@ function finishShotResolution() {
   crateField.clearHitFeedback()
   projectiles.clear()
   trebuchet.reset()
-  hud.hideToast()
+  hud.clearToasts()
   state = 'aiming'
 }
 
@@ -90,42 +123,53 @@ function showShotFeedback() {
   applyPowerUps(result.powerUps)
   crateField.showHitFeedback()
 
-  const crateText = `Crates hit: ${result.hitCount}`
-  const colorKey = 'Red = knocked down  •  Green = still standing'
-  const rewardText = result.powerUps.length > 0
-    ? `Power-up: ${result.powerUps.map((p) => POWER_UP_LABELS[p]).join(' + ')}`
-    : 'No power-up this shot'
-
-  const standing = crateField.countStanding()
-  let outcomeText = ''
-  let next: (() => void) | null = null
-  if (standing === 0) {
-    if (levelIndex + 1 >= LEVELS.length) {
-      outcomeText = 'You conquered the castle!'
-      next = () => loadLevel(0)
-    } else {
-      outcomeText = 'Level cleared!'
-      next = () => loadLevel(levelIndex + 1)
-    }
-  } else if (shotsLeft === 0) {
-    outcomeText = 'Out of shots — retry!'
-    next = () => loadLevel(levelIndex)
+  for (const { type, position } of result.consumed) {
+    const p = position.clone().project(camera)
+    hud.floatLabel(
+      POWER_UP_SHORT[type],
+      (p.x * 0.5 + 0.5) * innerWidth,
+      (-p.y * 0.5 + 0.5) * innerHeight,
+    )
   }
 
-  const lines = [crateText, colorKey, rewardText]
-  if (next) {
-    lines.push('', `${outcomeText}  — press ENTER`)
-    onContinue = next
+  hud.setResolve(null)
+  hud.toast(`Crates hit: %d`, { type: result.hitCount > 0 ? 'success'
+    : 'info', countTo: result.hitCount })
+  if (!tutorialShown) {
+    tutorialShown = true
+    hud.toast('Red = knocked down  •  Green = still standing',
+      { type: 'info', duration: 6 })
+  }
+  if (result.powerUps.length > 0) {
+    hud.toast(`Power-up: ${result.powerUps
+      .map((p) => POWER_UP_LABELS[p]).join(' + ')}`, { type: 'reward' })
+  }
+
+  const standing = crateField.countStanding()
+  if (standing === 0) {
+    if (levelIndex + 1 >= LEVELS.length) {
+      hud.banner('CASTLE CONQUERED!', 'press ENTER to play again')
+      sfx.fanfare()
+      onContinue = () => loadLevel(0)
+    } else {
+      hud.banner('LEVEL CLEARED!', 'press ENTER for the next level')
+      sfx.fanfare()
+      onContinue = () => loadLevel(levelIndex + 1)
+    }
+    state = 'transition'
+  } else if (shotsLeft === 0) {
+    hud.banner('OUT OF SHOTS', 'press ENTER to retry')
+    sfx.defeat()
+    onContinue = () => loadLevel(levelIndex)
     state = 'transition'
   } else {
     feedbackTimer = 0
     state = 'feedback'
   }
-  hud.setTimer(null)
-  hud.showToast(lines.join('\n'))
 }
 
 loadLevel(0)
+startMusic()
 
 const clock = new THREE.Clock()
 renderer.setAnimationLoop(() => {
@@ -143,8 +187,12 @@ renderer.setAnimationLoop(() => {
 
     case 'charging':
       charge = Math.min(1, charge + dt / CHARGE_TIME)
+      sfx.charge(charge)
       if (input.wasReleased('Space')) {
+        sfx.chargeEnd()
+        sfx.launch()
         crateField.beginShot()
+        groundHitThisShot = false
         shotsLeft -= 1
         hud.setShots(shotsLeft)
         const modifiers = { ...nextShot }
@@ -166,9 +214,16 @@ renderer.setAnimationLoop(() => {
       }
       break
 
-    case 'resolving':
+    case 'resolving': {
       resolveTimer += dt
-      hud.setTimer(Math.max(0, MAX_RESOLVE - resolveTimer))
+      hud.setResolve(Math.max(0, 1 - resolveTimer / MAX_RESOLVE))
+      const standingNow = crateField.countStanding()
+      if (standingNow < prevStanding) effects.shake(0.15)
+      if (standingNow === 0 && prevStanding > 0) {
+        slowmoTimer = 1.2
+        timeScale = 0.3
+      }
+      prevStanding = standingNow
       if (
         resolveTimer > MAX_RESOLVE ||
         (resolveTimer > MIN_RESOLVE &&
@@ -179,6 +234,7 @@ renderer.setAnimationLoop(() => {
         showShotFeedback()
       }
       break
+    }
 
     case 'feedback':
       feedbackTimer += dt
@@ -187,6 +243,7 @@ renderer.setAnimationLoop(() => {
 
     case 'transition':
       if (input.wasPressed('Enter')) {
+        hud.hideBanner()
         onContinue?.()
         onContinue = null
       }
@@ -200,9 +257,17 @@ renderer.setAnimationLoop(() => {
     state === 'aiming' || state === 'charging',
   )
 
-  trebuchet.update(dt)
-  physics.step(dt)
-  projectiles.update(dt)
+  if (slowmoTimer > 0) {
+    slowmoTimer -= dt
+  } else {
+    timeScale = Math.min(1, timeScale + dt * 2)
+  }
+  const simDt = dt * timeScale
+  trebuchet.update(simDt)
+  physics.step(simDt)
+  const ballPos = projectiles.position
+  if (ballPos) effects.trail(ballPos, simDt, projectiles.speed)
+  effects.update(simDt)
   renderer.render(scene, camera)
   input.endFrame()
 })

@@ -7,56 +7,86 @@ const RADIUS = 0.5
 const BLAST_RADIUS = 6
 const BLAST_FORCE = 22
 
-interface BlastEffect {
-  mesh: THREE.Mesh
-  age: number
-}
-
 export class ProjectileManager {
-  private mesh: THREE.Mesh | null = null
-  private body: CANNON.Body | null = null
-  private blastEffects: BlastEffect[] = []
+  private meshes: THREE.Mesh[] = []
+  private bodies: CANNON.Body[] = []
+  private bouncyMaterial: CANNON.Material
+  onImpact: ((pos: THREE.Vector3, speed: number, isGround: boolean) => void)
+    | null = null
+  onBlast: ((pos: THREE.Vector3) => void) | null = null
 
   constructor(
     private scene: THREE.Scene,
     private physics: PhysicsCtx,
-  ) {}
+  ) {
+    this.bouncyMaterial = new CANNON.Material('bouncy')
+    this.physics.world.addContactMaterial(new CANNON.ContactMaterial(
+      this.bouncyMaterial,
+      this.physics.world.defaultMaterial,
+      { restitution: 0.7, friction: 0.3 },
+    ))
+  }
 
-  launch(pos: THREE.Vector3, vel: THREE.Vector3, modifiers: ShotModifiers = {}) {
+  launch(pos: THREE.Vector3, vel: THREE.Vector3,
+    modifiers: ShotModifiers = {}) {
     this.clear()
-    this.mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(RADIUS, 24, 16),
-      new THREE.MeshStandardMaterial({
-        color: modifiers.blast ? 0xff8a24 : modifiers.heavy ? 0x30343b : 0x8a8a8a,
-        emissive: modifiers.blast ? 0x7a2100 : 0x000000,
-        roughness: 0.9,
-      }),
-    )
-    this.mesh.castShadow = true
-    this.scene.add(this.mesh)
-    this.body = new CANNON.Body({
-      mass: modifiers.heavy ? 13 : 5,
-      shape: new CANNON.Sphere(RADIUS),
-      position: new CANNON.Vec3(pos.x, pos.y, pos.z),
-      velocity: new CANNON.Vec3(vel.x, vel.y, vel.z),
-    })
-    this.body.allowSleep = true
-    this.body.sleepSpeedLimit = 0.3
-    this.physics.track(this.mesh, this.body)
+    const count = modifiers.multi ? 3 : 1
+    const radius = modifiers.multi ? 0.35 : RADIUS
+    const mass = modifiers.multi ? 2.5 : modifiers.heavy ? 13 : 5
+    const color = modifiers.blast ? 0xff8a24
+      : modifiers.bouncy ? 0x3ad6d0
+      : modifiers.heavy ? 0x30343b : 0x8a8a8a
 
-    if (modifiers.blast) {
-      let exploded = false
-      this.body.addEventListener('collide', () => {
-        if (exploded || !this.body) return
-        exploded = true
-        this.explode(this.body.position)
+    for (let i = 0; i < count; i++) {
+      const spread = count === 1 ? 0
+        : (i - 1) * (4 * Math.PI / 180) // -4°, 0, +4° around Y
+      const v = vel.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0),
+        spread)
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 24, 16),
+        new THREE.MeshStandardMaterial({
+          color,
+          emissive: modifiers.blast ? 0x7a2100 : 0x000000,
+          roughness: 0.9,
+        }),
+      )
+      mesh.castShadow = true
+      this.scene.add(mesh)
+      const body = new CANNON.Body({
+        mass,
+        shape: new CANNON.Sphere(radius),
+        position: new CANNON.Vec3(pos.x, pos.y, pos.z),
+        velocity: new CANNON.Vec3(v.x, v.y, v.z),
       })
+      if (modifiers.bouncy) body.material = this.bouncyMaterial
+      body.allowSleep = true
+      body.sleepSpeedLimit = 0.3
+      this.physics.track(mesh, body)
+      this.meshes.push(mesh)
+      this.bodies.push(body)
+
+      let exploded = false
+      body.addEventListener('collide',
+        (e: { body: CANNON.Body,
+          contact: { getImpactVelocityAlongNormal(): number } }) => {
+          if (!this.bodies.includes(body)) return
+          this.onImpact?.(
+            new THREE.Vector3(body.position.x, body.position.y,
+              body.position.z),
+            Math.abs(e.contact.getImpactVelocityAlongNormal()),
+            e.body === this.physics.ground,
+          )
+          if (modifiers.blast && !exploded) {
+            exploded = true
+            this.explode(body.position, body)
+          }
+        })
     }
   }
 
-  private explode(origin: CANNON.Vec3) {
+  private explode(origin: CANNON.Vec3, self: CANNON.Body) {
     for (const target of this.physics.world.bodies) {
-      if (target === this.body || target.mass === 0) continue
+      if (target === self || target.mass === 0) continue
       const offset = target.position.vsub(origin)
       const distance = offset.length()
       if (distance <= 0.01 || distance >= BLAST_RADIUS) continue
@@ -67,49 +97,25 @@ export class ProjectileManager {
       target.wakeUp()
       target.applyImpulse(offset, target.position)
     }
-
-    const material = new THREE.MeshBasicMaterial({
-      color: 0xffb12b,
-      transparent: true,
-      opacity: 0.75,
-      wireframe: true,
-      depthWrite: false,
-    })
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), material)
-    mesh.position.set(origin.x, origin.y, origin.z)
-    this.scene.add(mesh)
-    this.blastEffects.push({ mesh, age: 0 })
-  }
-
-  update(dt: number) {
-    for (let i = this.blastEffects.length - 1; i >= 0; i--) {
-      const effect = this.blastEffects[i]
-      effect.age += dt
-      const progress = Math.min(1, effect.age / 0.4)
-      effect.mesh.scale.setScalar(0.3 + progress * BLAST_RADIUS)
-      ;(effect.mesh.material as THREE.MeshBasicMaterial).opacity =
-        0.75 * (1 - progress)
-      if (progress >= 1) {
-        this.scene.remove(effect.mesh)
-        effect.mesh.geometry.dispose()
-        ;(effect.mesh.material as THREE.Material).dispose()
-        this.blastEffects.splice(i, 1)
-      }
-    }
+    this.onBlast?.(new THREE.Vector3(origin.x, origin.y, origin.z))
   }
 
   clear() {
-    if (this.body) this.physics.untrack(this.body)
-    if (this.mesh) {
-      this.scene.remove(this.mesh)
-      this.mesh.geometry.dispose()
-      ;(this.mesh.material as THREE.Material).dispose()
+    for (const body of this.bodies) this.physics.untrack(body)
+    for (const mesh of this.meshes) {
+      this.scene.remove(mesh)
+      mesh.geometry.dispose()
+      ;(mesh.material as THREE.Material).dispose()
     }
-    this.mesh = null
-    this.body = null
+    this.meshes = []
+    this.bodies = []
   }
 
   get speed() {
-    return this.body ? this.body.velocity.length() : 0
+    return Math.max(0, ...this.bodies.map((b) => b.velocity.length()))
+  }
+
+  get position(): THREE.Vector3 | null {
+    return this.meshes.length > 0 ? this.meshes[0].position : null
   }
 }

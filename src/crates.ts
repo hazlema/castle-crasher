@@ -20,6 +20,7 @@ interface Crate {
 export interface ShotResult {
   hitCount: number
   powerUps: PowerUpType[]
+  consumed: { type: PowerUpType, position: THREE.Vector3 }[]
 }
 
 export class CrateField {
@@ -114,14 +115,22 @@ export class CrateField {
     const newlyHit = this.crates.filter(
       (c) => c.standingAtShotStart && !this.isStanding(c),
     )
-    const powerUps: PowerUpType[] = []
+    const consumed: ShotResult['consumed'] = []
     for (const c of newlyHit) {
       if (c.special && !c.consumed) {
         c.consumed = true
-        powerUps.push(c.special)
+        consumed.push({
+          type: c.special,
+          position: new THREE.Vector3(c.body.position.x,
+            c.body.position.y, c.body.position.z),
+        })
       }
     }
-    return { hitCount: newlyHit.length, powerUps }
+    return {
+      hitCount: newlyHit.length,
+      powerUps: consumed.map((c) => c.type),
+      consumed,
+    }
   }
 
   showHitFeedback() {

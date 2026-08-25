@@ -3,6 +3,7 @@ import * as THREE from 'three'
 
 export interface PhysicsCtx {
   world: CANNON.World
+  ground: CANNON.Body
   track(mesh: THREE.Object3D, body: CANNON.Body): void
   untrack(body: CANNON.Body): void
   step(dt: number): void
@@ -21,6 +22,7 @@ export function createPhysics(): PhysicsCtx {
 
   return {
     world,
+    ground,
     track(mesh, body) {
       world.addBody(body)
       pairs.push({ mesh, body })
