@@ -18,20 +18,30 @@ function loadRandomBackground(
     texture.colorSpace = THREE.SRGBColorSpace
     scene.background = texture
 
+    // Background art keeps its horizon in the lower third of the image;
+    // pin that line to the 3D ground's on-screen horizon so towers and
+    // spires never sink behind the grass. Art below the line is meant to
+    // be hidden by the ground plane.
+    const IMAGE_HORIZON = 0.28
+
     const fitToViewport = () => {
       const image = texture.image as { width: number; height: number }
       const imageAspect = image.width / image.height
-      const viewportAspect = camera.aspect
 
-      texture.repeat.set(1, 1)
-      texture.offset.set(0, 0)
-      if (imageAspect > viewportAspect) {
-        texture.repeat.x = viewportAspect / imageAspect
-        texture.offset.x = (1 - texture.repeat.x) / 2
-      } else {
-        texture.repeat.y = imageAspect / viewportAspect
-        texture.offset.y = (1 - texture.repeat.y) / 2
-      }
+      camera.updateMatrixWorld()
+      const ndc = new THREE.Vector3(0, 0.001, -5000).project(camera)
+      const horizonV = THREE.MathUtils.clamp((ndc.y + 1) / 2, 0.3, 0.7)
+
+      // Aspect-true vertical scale, capped so the sky never samples past
+      // the top edge of the image on narrow viewports.
+      texture.repeat.y = Math.min(
+        imageAspect / camera.aspect,
+        (1 - IMAGE_HORIZON) / (1 - horizonV),
+      )
+      texture.repeat.x = Math.min(
+        1, texture.repeat.y * camera.aspect / imageAspect)
+      texture.offset.x = (1 - texture.repeat.x) / 2
+      texture.offset.y = IMAGE_HORIZON - texture.repeat.y * horizonV
       texture.needsUpdate = true
     }
 
