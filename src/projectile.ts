@@ -37,11 +37,18 @@ export class ProjectileManager {
       : modifiers.bouncy ? 0x3ad6d0
       : modifiers.heavy ? 0x30343b : 0x8a8a8a
 
+    // Side-by-side spawn offsets keep multi-shot balls from overlapping —
+    // interpenetrating bodies get blown apart by the solver on step one.
+    const side = new THREE.Vector3(vel.x, 0, vel.z)
+      .normalize().cross(new THREE.Vector3(0, 1, 0))
+
     for (let i = 0; i < count; i++) {
       const spread = count === 1 ? 0
-        : (i - 1) * (4 * Math.PI / 180) // -4°, 0, +4° around Y
+        : (i - 1) * (2.5 * Math.PI / 180) // -2.5°, 0, +2.5° around Y
       const v = vel.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0),
         spread)
+      const p = count === 1 ? pos.clone()
+        : pos.clone().addScaledVector(side, (i - 1) * radius * 2.2)
       const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(radius, 24, 16),
         new THREE.MeshStandardMaterial({
@@ -55,9 +62,13 @@ export class ProjectileManager {
       const body = new CANNON.Body({
         mass,
         shape: new CANNON.Sphere(radius),
-        position: new CANNON.Vec3(pos.x, pos.y, pos.z),
+        position: new CANNON.Vec3(p.x, p.y, p.z),
         velocity: new CANNON.Vec3(v.x, v.y, v.z),
       })
+      // Projectiles never collide with each other (group 2 excluded
+      // from their mask) so multi-shot balls fly a clean fan.
+      body.collisionFilterGroup = 2
+      body.collisionFilterMask = ~2
       if (modifiers.bouncy) body.material = this.bouncyMaterial
       body.allowSleep = true
       body.sleepSpeedLimit = 0.3

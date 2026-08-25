@@ -11,7 +11,9 @@ const tmp = new CANNON.Vec3()
 interface Crate {
   mesh: THREE.Mesh
   body: CANNON.Body
+  homeX: number
   homeY: number
+  homeZ: number
   special: PowerUpType | null
   consumed: boolean
   standingAtShotStart: boolean
@@ -76,7 +78,9 @@ export class CrateField {
       this.crates.push({
         mesh,
         body,
+        homeX: x,
         homeY: y,
+        homeZ: z,
         special,
         consumed: false,
         standingAtShotStart: true,
@@ -93,12 +97,17 @@ export class CrateField {
     this.crates = []
   }
 
-  // Standing = still upright (tilt < 45°) and not fallen off its home height.
+  // Standing = still upright (tilt < 45°), not fallen off its home
+  // height, and not shoved off its spot — a blast can scatter crates
+  // that land upright at ground level far from home.
   private isStanding(c: Crate): boolean {
     c.body.quaternion.vmult(UP, tmp)
     const upright = tmp.dot(UP) > 0.707
     const atHome = c.body.position.y > c.homeY - 0.5
-    return upright && atHome
+    const dx = c.body.position.x - c.homeX
+    const dz = c.body.position.z - c.homeZ
+    const onSpot = dx * dx + dz * dz < 1.2 * 1.2
+    return upright && atHome && onSpot
   }
 
   countStanding(): number {
