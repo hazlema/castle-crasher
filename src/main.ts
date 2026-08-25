@@ -10,6 +10,7 @@ import { input } from './input'
 import { AimMarker } from './aim-marker'
 import { sfx } from './sfx'
 import { startMusic } from './music'
+import { Effects } from './effects'
 import {
   POWER_UP_LABELS,
   type PowerUpType,
@@ -36,6 +37,7 @@ scene.add(trebuchet.group)
 const aimMarker = new AimMarker(scene)
 const projectiles = new ProjectileManager(scene, physics)
 const crateField = new CrateField(scene, physics)
+const effects = new Effects(scene, camera)
 
 let state: State = 'aiming'
 let levelIndex = 0
@@ -214,6 +216,7 @@ renderer.setAnimationLoop(() => {
   trebuchet.update(dt)
   physics.step(dt)
   projectiles.update(dt)
+  effects.update(dt)
   renderer.render(scene, camera)
   input.endFrame()
 })
