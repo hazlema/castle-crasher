@@ -9,6 +9,7 @@ import { hud } from './hud'
 import { input } from './input'
 import { AimMarker } from './aim-marker'
 import { sfx } from './sfx'
+import { startMusic } from './music'
 import {
   POWER_UP_LABELS,
   type PowerUpType,
@@ -131,6 +132,7 @@ function showShotFeedback() {
 }
 
 loadLevel(0)
+startMusic()
 
 const clock = new THREE.Clock()
 renderer.setAnimationLoop(() => {
