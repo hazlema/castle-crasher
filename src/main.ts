@@ -13,6 +13,7 @@ import { startMusic } from './music'
 import { Effects } from './effects'
 import {
   POWER_UP_LABELS,
+  POWER_UP_SHORT,
   type PowerUpType,
   type ShotModifiers,
 } from './powerups'
@@ -71,6 +72,8 @@ function updatePowerUpHud() {
   const active: string[] = []
   if (nextShot.blast) active.push('Blast')
   if (nextShot.heavy) active.push('Heavy')
+  if (nextShot.multi) active.push('Multi')
+  if (nextShot.bouncy) active.push('Bouncy')
   hud.setPowerUps(active.length > 0 ? `Next: ${active.join(' + ')}` : '')
 }
 
@@ -98,6 +101,8 @@ function applyPowerUps(powerUps: PowerUpType[]) {
     if (powerUp === 'extra-shot') shotsLeft += 1
     if (powerUp === 'blast-shot') nextShot.blast = true
     if (powerUp === 'heavy-shot') nextShot.heavy = true
+    if (powerUp === 'multi-shot') nextShot.multi = true
+    if (powerUp === 'bouncy-shot') nextShot.bouncy = true
   }
   hud.setShots(shotsLeft)
   updatePowerUpHud()
@@ -117,6 +122,15 @@ function showShotFeedback() {
   const result = crateField.finishShot()
   applyPowerUps(result.powerUps)
   crateField.showHitFeedback()
+
+  for (const { type, position } of result.consumed) {
+    const p = position.clone().project(camera)
+    hud.floatLabel(
+      POWER_UP_SHORT[type],
+      (p.x * 0.5 + 0.5) * innerWidth,
+      (-p.y * 0.5 + 0.5) * innerHeight,
+    )
+  }
 
   hud.setResolve(null)
   hud.toast(`Crates hit: %d`, { type: result.hitCount > 0 ? 'success'
