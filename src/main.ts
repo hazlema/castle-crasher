@@ -31,7 +31,7 @@ type State =
   | 'feedback'
   | 'transition'
 
-const { scene, camera, renderer } = createScene()
+const { scene, camera, renderer, swapBackground } = createScene()
 const physics = createPhysics()
 const trebuchet = new Trebuchet()
 scene.add(trebuchet.group)
@@ -77,7 +77,12 @@ function updatePowerUpHud() {
   hud.setPowerUps(active.length > 0 ? `Next: ${active.join(' + ')}` : '')
 }
 
+let loadedLevel = -1
+
 function loadLevel(i: number) {
+  // Fresh scenery on every level change; retries keep their backdrop
+  if (i !== loadedLevel) swapBackground()
+  loadedLevel = i
   levelIndex = i
   const level = LEVELS[i]
   shotsLeft = level.shots

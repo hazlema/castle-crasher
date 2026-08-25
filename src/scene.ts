@@ -6,54 +6,42 @@ const backgroundModules = import.meta.glob(
   { eager: true, query: '?url', import: 'default' },
 ) as Record<string, string>
 
-function loadRandomBackground(
-  scene: THREE.Scene,
+// Background art keeps its horizon in the lower third of the image;
+// pin that line to the 3D ground's on-screen horizon so towers and
+// spires never sink behind the grass. Art below the line is meant to
+// be hidden by the ground plane.
+const IMAGE_HORIZON = 0.28
+
+function fitBackground(
+  texture: THREE.Texture,
   camera: THREE.PerspectiveCamera,
 ) {
-  const backgrounds = Object.values(backgroundModules)
-  if (backgrounds.length === 0) return
-  const url = backgrounds[Math.floor(Math.random() * backgrounds.length)]
+  const image = texture.image as { width: number; height: number }
+  const imageAspect = image.width / image.height
 
-  new THREE.TextureLoader().load(url, (texture) => {
-    texture.colorSpace = THREE.SRGBColorSpace
-    scene.background = texture
+  camera.updateMatrixWorld()
+  const ndc = new THREE.Vector3(0, 0.001, -5000).project(camera)
+  const horizonV = THREE.MathUtils.clamp((ndc.y + 1) / 2, 0.3, 0.7)
 
-    // Background art keeps its horizon in the lower third of the image;
-    // pin that line to the 3D ground's on-screen horizon so towers and
-    // spires never sink behind the grass. Art below the line is meant to
-    // be hidden by the ground plane.
-    const IMAGE_HORIZON = 0.28
-
-    const fitToViewport = () => {
-      const image = texture.image as { width: number; height: number }
-      const imageAspect = image.width / image.height
-
-      camera.updateMatrixWorld()
-      const ndc = new THREE.Vector3(0, 0.001, -5000).project(camera)
-      const horizonV = THREE.MathUtils.clamp((ndc.y + 1) / 2, 0.3, 0.7)
-
-      // Aspect-true vertical scale, capped so the sky never samples past
-      // the top edge of the image on narrow viewports.
-      texture.repeat.y = Math.min(
-        imageAspect / camera.aspect,
-        (1 - IMAGE_HORIZON) / (1 - horizonV),
-      )
-      texture.repeat.x = Math.min(
-        1, texture.repeat.y * camera.aspect / imageAspect)
-      texture.offset.x = (1 - texture.repeat.x) / 2
-      texture.offset.y = IMAGE_HORIZON - texture.repeat.y * horizonV
-      texture.needsUpdate = true
-    }
-
-    fitToViewport()
-    addEventListener('resize', fitToViewport)
-  })
+  // Aspect-true vertical scale, capped so the sky never samples past
+  // the top edge of the image on narrow viewports.
+  texture.repeat.y = Math.min(
+    imageAspect / camera.aspect,
+    (1 - IMAGE_HORIZON) / (1 - horizonV),
+  )
+  texture.repeat.x = Math.min(
+    1, texture.repeat.y * camera.aspect / imageAspect)
+  texture.offset.x = (1 - texture.repeat.x) / 2
+  texture.offset.y = IMAGE_HORIZON - texture.repeat.y * horizonV
+  texture.needsUpdate = true
 }
 
 export interface SceneCtx {
   scene: THREE.Scene
   camera: THREE.PerspectiveCamera
   renderer: THREE.WebGLRenderer
+  // Load a random background different from the current one
+  swapBackground(): void
 }
 
 export function createScene(): SceneCtx {
@@ -68,7 +56,24 @@ export function createScene(): SceneCtx {
   // Offset three-quarter view so the crate stacks aren't hidden behind the trebuchet
   camera.position.set(8, 8, 15)
   camera.lookAt(0, 3, -30)
-  loadRandomBackground(scene, camera)
+
+  let currentUrl = ''
+  const swapBackground = () => {
+    const backgrounds = Object.values(backgroundModules)
+    if (backgrounds.length === 0) return
+    let pool = backgrounds.filter((u) => u !== currentUrl)
+    if (pool.length === 0) pool = backgrounds
+    const url = pool[Math.floor(Math.random() * pool.length)]
+    currentUrl = url
+    new THREE.TextureLoader().load(url, (texture) => {
+      if (url !== currentUrl) return // a newer swap won the race
+      texture.colorSpace = THREE.SRGBColorSpace
+      fitBackground(texture, camera)
+      const old = scene.background
+      scene.background = texture
+      if (old instanceof THREE.Texture) old.dispose()
+    })
+  }
 
   const renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setSize(innerWidth, innerHeight)
@@ -103,7 +108,10 @@ export function createScene(): SceneCtx {
     camera.aspect = innerWidth / innerHeight
     camera.updateProjectionMatrix()
     renderer.setSize(innerWidth, innerHeight)
+    if (scene.background instanceof THREE.Texture) {
+      fitBackground(scene.background, camera)
+    }
   })
 
-  return { scene, camera, renderer }
+  return { scene, camera, renderer, swapBackground }
 }
