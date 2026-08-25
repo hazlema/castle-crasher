@@ -54,6 +54,7 @@ export class Effects {
     color: 0x8a6a42, transparent: true })
   private shardGeometry = new THREE.BoxGeometry(0.22, 0.1, 0.34)
   private trailTimer = 0
+  private rings: { mesh: THREE.Mesh, age: number }[] = []
 
   constructor(
     private scene: THREE.Scene,
@@ -148,6 +149,32 @@ export class Effects {
     }
   }
 
+  blastFx(pos: THREE.Vector3) {
+    this.shake(1.1)
+    // white flash, dies fast
+    this.puff(pos, { color: 0xffffff, size: 5, life: 0.15 })
+    // fireball + smoke
+    this.puff(pos, { color: 0xffb12b, size: 3, life: 0.4 })
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2
+      this.puff(pos, {
+        color: 0x777777, size: 1.6, life: 1.2,
+        vel: new THREE.Vector3(Math.cos(a) * 4, 2 + Math.random() * 2,
+          Math.sin(a) * 4),
+      })
+    }
+    // ground shockwave ring
+    const mesh = new THREE.Mesh(
+      new THREE.RingGeometry(0.9, 1.15, 48),
+      new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true,
+        opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }),
+    )
+    mesh.rotation.x = -Math.PI / 2
+    mesh.position.set(pos.x, 0.05, pos.z)
+    this.scene.add(mesh)
+    this.rings.push({ mesh, age: 0 })
+  }
+
   shake(strength: number) {
     this.trauma = Math.min(1.5, this.trauma + strength)
   }
@@ -201,6 +228,21 @@ export class Effects {
       s.mesh.rotation.z += s.spin.z * dt
       ;(s.mesh.material as THREE.MeshStandardMaterial).opacity =
         1 - s.age / s.life
+    }
+
+    for (let i = this.rings.length - 1; i >= 0; i--) {
+      const r = this.rings[i]
+      r.age += dt
+      const t = r.age / 0.5
+      if (t >= 1) {
+        this.scene.remove(r.mesh)
+        r.mesh.geometry.dispose()
+        ;(r.mesh.material as THREE.Material).dispose()
+        this.rings.splice(i, 1)
+        continue
+      }
+      r.mesh.scale.setScalar(1 + t * 8)
+      ;(r.mesh.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - t)
     }
   }
 }

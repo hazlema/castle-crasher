@@ -7,17 +7,12 @@ const RADIUS = 0.5
 const BLAST_RADIUS = 6
 const BLAST_FORCE = 22
 
-interface BlastEffect {
-  mesh: THREE.Mesh
-  age: number
-}
-
 export class ProjectileManager {
   private mesh: THREE.Mesh | null = null
   private body: CANNON.Body | null = null
-  private blastEffects: BlastEffect[] = []
   onImpact: ((pos: THREE.Vector3, speed: number, isGround: boolean) => void)
     | null = null
+  onBlast: ((pos: THREE.Vector3) => void) | null = null
 
   constructor(
     private scene: THREE.Scene,
@@ -81,34 +76,7 @@ export class ProjectileManager {
       target.applyImpulse(offset, target.position)
     }
 
-    const material = new THREE.MeshBasicMaterial({
-      color: 0xffb12b,
-      transparent: true,
-      opacity: 0.75,
-      wireframe: true,
-      depthWrite: false,
-    })
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), material)
-    mesh.position.set(origin.x, origin.y, origin.z)
-    this.scene.add(mesh)
-    this.blastEffects.push({ mesh, age: 0 })
-  }
-
-  update(dt: number) {
-    for (let i = this.blastEffects.length - 1; i >= 0; i--) {
-      const effect = this.blastEffects[i]
-      effect.age += dt
-      const progress = Math.min(1, effect.age / 0.4)
-      effect.mesh.scale.setScalar(0.3 + progress * BLAST_RADIUS)
-      ;(effect.mesh.material as THREE.MeshBasicMaterial).opacity =
-        0.75 * (1 - progress)
-      if (progress >= 1) {
-        this.scene.remove(effect.mesh)
-        effect.mesh.geometry.dispose()
-        ;(effect.mesh.material as THREE.Material).dispose()
-        this.blastEffects.splice(i, 1)
-      }
-    }
+    this.onBlast?.(new THREE.Vector3(origin.x, origin.y, origin.z))
   }
 
   clear() {

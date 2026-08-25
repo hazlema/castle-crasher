@@ -49,6 +49,10 @@ projectiles.onImpact = (pos, speed, isGround) => {
   }
   if (!isGround && speed > 4) effects.splinters(pos)
 }
+projectiles.onBlast = (pos) => {
+  sfx.blast()
+  effects.blastFx(pos)
+}
 
 let state: State = 'aiming'
 let levelIndex = 0
@@ -59,6 +63,9 @@ let feedbackTimer = 0
 let onContinue: (() => void) | null = null
 let nextShot: ShotModifiers = {}
 let tutorialShown = false
+let timeScale = 1
+let slowmoTimer = 0
+let prevStanding = 0
 
 function updatePowerUpHud() {
   const active: string[] = []
@@ -74,6 +81,9 @@ function loadLevel(i: number) {
   projectiles.clear()
   trebuchet.reset()
   crateField.spawn(level.crates, level.specialCrates)
+  prevStanding = crateField.countStanding()
+  timeScale = 1
+  slowmoTimer = 0
   hud.setLevel(i + 1)
   hud.setShots(shotsLeft)
   hud.clearToasts()
@@ -193,6 +203,12 @@ renderer.setAnimationLoop(() => {
     case 'resolving':
       resolveTimer += dt
       hud.setResolve(Math.max(0, 1 - resolveTimer / MAX_RESOLVE))
+      const standingNow = crateField.countStanding()
+      if (standingNow === 0 && prevStanding > 0) {
+        slowmoTimer = 1.2
+        timeScale = 0.3
+      }
+      prevStanding = standingNow
       if (
         resolveTimer > MAX_RESOLVE ||
         (resolveTimer > MIN_RESOLVE &&
@@ -225,12 +241,17 @@ renderer.setAnimationLoop(() => {
     state === 'aiming' || state === 'charging',
   )
 
-  trebuchet.update(dt)
-  physics.step(dt)
-  projectiles.update(dt)
+  if (slowmoTimer > 0) {
+    slowmoTimer -= dt
+  } else {
+    timeScale = Math.min(1, timeScale + dt * 2)
+  }
+  const simDt = dt * timeScale
+  trebuchet.update(simDt)
+  physics.step(simDt)
   const ballPos = projectiles.position
-  if (ballPos) effects.trail(ballPos, dt, projectiles.speed)
-  effects.update(dt)
+  if (ballPos) effects.trail(ballPos, simDt, projectiles.speed)
+  effects.update(simDt)
   renderer.render(scene, camera)
   input.endFrame()
 })
