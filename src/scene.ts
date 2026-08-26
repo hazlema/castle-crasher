@@ -134,8 +134,11 @@ export function createScene(): SceneCtx {
   sun.shadow.camera.far = 120
   scene.add(sun)
 
+  // The grass field ends short of the true horizon so the painted
+  // valley in the background art shows beyond its far edge. The camera
+  // is static, so the seam never shifts.
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(400, 400),
+    new THREE.PlaneGeometry(400, 100),
     makeMaterial('/textures/ground.jpg', 0x6d8f4e, 40),
   )
   ground.rotation.x = -Math.PI / 2
