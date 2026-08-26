@@ -80,13 +80,13 @@ function updatePowerUpHud() {
 
 let loadedLevel = -1
 
-function loadLevel(i: number) {
+function loadLevel(i: number, bonusShots = 0) {
   // Fresh scenery on every level change; retries keep their backdrop
   if (i !== loadedLevel) swapBackground()
   loadedLevel = i
   levelIndex = i
   const level = LEVELS[i]
-  shotsLeft = level.shots
+  shotsLeft = level.shots + bonusShots
   projectiles.clear()
   trebuchet.reset()
   crateField.spawn(level.crates, level.specialCrates)
@@ -159,8 +159,9 @@ function showShotFeedback() {
       onContinue = () => loadLevel(0)
     } else {
       hud.banner('LEVEL CLEARED!', 'press ENTER for the next level')
+      hud.toast('+1 bonus shot for the next level', { type: 'reward' })
       sfx.fanfare()
-      onContinue = () => loadLevel(levelIndex + 1)
+      onContinue = () => loadLevel(levelIndex + 1, 1)
     }
     state = 'transition'
   } else if (shotsLeft === 0) {
@@ -174,7 +175,10 @@ function showShotFeedback() {
   }
 }
 
-loadLevel(0)
+// ?level=N jumps straight to a level (handy for practice and testing)
+const startLevel = Math.min(LEVELS.length,
+  Math.max(1, Number(new URLSearchParams(location.search).get('level')) || 1))
+loadLevel(startLevel - 1)
 startMusic()
 
 const menu = new PauseMenu()

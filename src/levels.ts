@@ -52,4 +52,56 @@ export const LEVELS: Level[] = [
       ...col(0, -46, 2), [0, HALF, -34],
     ],
   },
+  // 6: twin keeps with a gatehouse between
+  {
+    shots: 5,
+    specialCrates: 2,
+    crates: [
+      ...col(-3, -40, 4), ...col(3, -40, 4), ...col(0, -40, 2),
+    ],
+  },
+  // 7: the staircase — each column one taller than the last
+  {
+    shots: 5,
+    specialCrates: 3,
+    crates: [
+      ...col(-6, -40, 1), ...col(-3, -40, 2), ...col(0, -40, 3),
+      ...col(3, -40, 4), ...col(6, -40, 5),
+    ],
+  },
+  // 8: courtyard — low front wall guarding tall rear towers
+  {
+    shots: 6,
+    specialCrates: 3,
+    crates: [
+      ...col(-2, -36, 2), ...col(0, -36, 2), ...col(2, -36, 2),
+      ...col(-4, -44, 3), ...col(4, -44, 3), ...col(0, -46, 4),
+    ],
+  },
+  // 9: the great wall — wide rampart with a keep hidden behind
+  {
+    shots: 6,
+    specialCrates: 3,
+    crates: [
+      ...col(-5, -40, 3), ...col(-3, -40, 3), ...col(-1, -40, 3),
+      ...col(1, -40, 3), ...col(3, -40, 3), ...col(5, -40, 3),
+      ...col(0, -48, 4),
+    ],
+  },
+  // 10: the citadel — grand pyramid flanked by watchtowers
+  {
+    shots: 7,
+    specialCrates: 4,
+    crates: [
+      ...col(-3.4, -42, 1), ...col(-1.7, -42, 1), ...col(0, -42, 1),
+      ...col(1.7, -42, 1), ...col(3.4, -42, 1),
+      [-2.55, HALF + H, -42], [-0.85, HALF + H, -42],
+      [0.85, HALF + H, -42], [2.55, HALF + H, -42],
+      [-1.7, HALF + 2 * H, -42], [0, HALF + 2 * H, -42],
+      [1.7, HALF + 2 * H, -42],
+      [-0.85, HALF + 3 * H, -42], [0.85, HALF + 3 * H, -42],
+      [0, HALF + 4 * H, -42],
+      ...col(-6, -38, 3), ...col(6, -38, 3),
+    ],
+  },
 ]

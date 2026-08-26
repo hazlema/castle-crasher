@@ -44,10 +44,13 @@ ammo pouch) gets an upgrade:
 
 Power-ups stack. Yes, Blast + Multi means three explosions.
 
-## Five levels of escalating rudeness
+## Ten levels of escalating rudeness
 
-A lone tower, triplet towers, a pyramid, a walled compound, and finally a
-proper castle gate. Clear them all and the castle is yours.
+A lone tower, triplet towers, a pyramid, a walled compound, a castle
+gate — and that's just the warm-up. Beyond lie twin keeps, a staircase
+fortress, a guarded courtyard, a great wall, and the citadel itself.
+Clear a level and you carry **one bonus shot** into the next. Clear them
+all and the castle is yours.
 
 ## Make it yours
 
