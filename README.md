@@ -8,6 +8,8 @@ castles. Aim, charge, release — then watch the wreckage settle while smoke
 drifts, the camera shudders, and your last crate falls in glorious slow
 motion. It's harder than it looks. That's part of the charm.
 
+![A trebuchet flings a boulder toward crate towers beneath sunrise mountains](assets/screenshot.jpg)
+
 ## How to play
 
 | Do this | To |
