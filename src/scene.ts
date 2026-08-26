@@ -6,16 +6,25 @@ const backgroundModules = import.meta.glob(
   { eager: true, query: '?url', import: 'default' },
 ) as Record<string, string>
 
-// Background art keeps its horizon in the lower third of the image;
-// pin that line to the 3D ground's on-screen horizon so towers and
-// spires never sink behind the grass. Art below the line is meant to
-// be hidden by the ground plane.
-const IMAGE_HORIZON = 0.28
+// Background art is a ~21:9 panorama with its horizon at 45% of the
+// frame height; pin that line to the 3D ground's on-screen horizon so
+// towers and spires never sink behind the grass. Art below the line is
+// meant to be hidden by the ground plane. Art with a different horizon
+// can tag it in the filename (`name.h30.png` = 30% from the bottom).
+const DEFAULT_HORIZON = 0.45
+
+const horizonByUrl = new Map<string, number>()
+for (const [path, url] of Object.entries(backgroundModules)) {
+  const tag = path.match(/\.h(\d{2})\./)
+  horizonByUrl.set(url, tag ? Number(tag[1]) / 100 : DEFAULT_HORIZON)
+}
 
 function fitBackground(
   texture: THREE.Texture,
   camera: THREE.PerspectiveCamera,
 ) {
+  const imageHorizon =
+    (texture.userData.horizon as number | undefined) ?? DEFAULT_HORIZON
   const image = texture.image as HTMLImageElement | HTMLVideoElement
   const imageAspect = image instanceof HTMLVideoElement
     ? image.videoWidth / image.videoHeight
@@ -29,12 +38,12 @@ function fitBackground(
   // the top edge of the image on narrow viewports.
   texture.repeat.y = Math.min(
     imageAspect / camera.aspect,
-    (1 - IMAGE_HORIZON) / (1 - horizonV),
+    (1 - imageHorizon) / (1 - horizonV),
   )
   texture.repeat.x = Math.min(
     1, texture.repeat.y * camera.aspect / imageAspect)
   texture.offset.x = (1 - texture.repeat.x) / 2
-  texture.offset.y = IMAGE_HORIZON - texture.repeat.y * horizonV
+  texture.offset.y = imageHorizon - texture.repeat.y * horizonV
   texture.needsUpdate = true
 }
 
@@ -61,8 +70,9 @@ export function createScene(): SceneCtx {
 
   let currentUrl = ''
 
-  const applyBackground = (texture: THREE.Texture) => {
+  const applyBackground = (texture: THREE.Texture, url: string) => {
     texture.colorSpace = THREE.SRGBColorSpace
+    texture.userData.horizon = horizonByUrl.get(url)
     fitBackground(texture, camera)
     const old = scene.background
     scene.background = texture
@@ -93,12 +103,12 @@ export function createScene(): SceneCtx {
       video.addEventListener('loadeddata', () => {
         if (url !== currentUrl) return // a newer swap won the race
         void video.play()
-        applyBackground(new THREE.VideoTexture(video))
+        applyBackground(new THREE.VideoTexture(video), url)
       }, { once: true })
     } else {
       new THREE.TextureLoader().load(url, (texture) => {
         if (url !== currentUrl) return // a newer swap won the race
-        applyBackground(texture)
+        applyBackground(texture, url)
       })
     }
   }
