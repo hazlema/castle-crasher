@@ -186,7 +186,7 @@ menu.onRestart = () => {
   nextShot = {}
   onContinue = null
   updatePowerUpHud()
-  loadLevel(0)
+  loadLevel(levelIndex)
 }
 
 let highlighted = false

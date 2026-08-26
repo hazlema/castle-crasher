@@ -10,15 +10,16 @@ interface Item {
   set?: (v: number) => void
 }
 
-// ESC pause menu. "Start over" sits first and is selected every time the
-// menu opens, so ESC + ENTER is the instant rage-restart.
+// ESC pause menu. "Restart level" sits first and is selected every time
+// the menu opens, so ESC + ENTER is the instant rage-restart. A full
+// game restart is just a page refresh.
 export class PauseMenu {
   onRestart: (() => void) | null = null
   private index = 0
   private opened = false
   private items: Item[] = [
     {
-      label: 'Start over',
+      label: 'Restart level',
       action: () => {
         this.close()
         this.onRestart?.()

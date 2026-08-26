@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { makeMaterial } from './assets'
 
 const backgroundModules = import.meta.glob(
-  './backgrounds/*.{jpg,jpeg,png,webp}',
+  './backgrounds/*.{jpg,jpeg,png,webp,mp4,webm}',
   { eager: true, query: '?url', import: 'default' },
 ) as Record<string, string>
 
@@ -16,8 +16,10 @@ function fitBackground(
   texture: THREE.Texture,
   camera: THREE.PerspectiveCamera,
 ) {
-  const image = texture.image as { width: number; height: number }
-  const imageAspect = image.width / image.height
+  const image = texture.image as HTMLImageElement | HTMLVideoElement
+  const imageAspect = image instanceof HTMLVideoElement
+    ? image.videoWidth / image.videoHeight
+    : image.width / image.height
 
   camera.updateMatrixWorld()
   const ndc = new THREE.Vector3(0, 0.001, -5000).project(camera)
@@ -58,6 +60,23 @@ export function createScene(): SceneCtx {
   camera.lookAt(0, 3, -30)
 
   let currentUrl = ''
+
+  const applyBackground = (texture: THREE.Texture) => {
+    texture.colorSpace = THREE.SRGBColorSpace
+    fitBackground(texture, camera)
+    const old = scene.background
+    scene.background = texture
+    if (old instanceof THREE.Texture) {
+      const media = old.image
+      if (media instanceof HTMLVideoElement) {
+        media.pause()
+        media.removeAttribute('src')
+        media.load() // release the decoder
+      }
+      old.dispose()
+    }
+  }
+
   const swapBackground = () => {
     const backgrounds = Object.values(backgroundModules)
     if (backgrounds.length === 0) return
@@ -65,14 +84,23 @@ export function createScene(): SceneCtx {
     if (pool.length === 0) pool = backgrounds
     const url = pool[Math.floor(Math.random() * pool.length)]
     currentUrl = url
-    new THREE.TextureLoader().load(url, (texture) => {
-      if (url !== currentUrl) return // a newer swap won the race
-      texture.colorSpace = THREE.SRGBColorSpace
-      fitBackground(texture, camera)
-      const old = scene.background
-      scene.background = texture
-      if (old instanceof THREE.Texture) old.dispose()
-    })
+    if (/\.(mp4|webm)(\?|$)/.test(url)) {
+      const video = document.createElement('video')
+      video.muted = true
+      video.loop = true
+      video.playsInline = true
+      video.src = url
+      video.addEventListener('loadeddata', () => {
+        if (url !== currentUrl) return // a newer swap won the race
+        void video.play()
+        applyBackground(new THREE.VideoTexture(video))
+      }, { once: true })
+    } else {
+      new THREE.TextureLoader().load(url, (texture) => {
+        if (url !== currentUrl) return // a newer swap won the race
+        applyBackground(texture)
+      })
+    }
   }
 
   const renderer = new THREE.WebGLRenderer({ antialias: true })
