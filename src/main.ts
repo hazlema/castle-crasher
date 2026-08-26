@@ -7,6 +7,7 @@ import { CrateField } from './crates'
 import { LEVELS } from './levels'
 import { hud } from './hud'
 import { input } from './input'
+import { PauseMenu } from './menu'
 import { AimMarker } from './aim-marker'
 import { sfx } from './sfx'
 import { startMusic } from './music'
@@ -176,9 +177,48 @@ function showShotFeedback() {
 loadLevel(0)
 startMusic()
 
+const menu = new PauseMenu()
+menu.onRestart = () => {
+  nextShot = {}
+  onContinue = null
+  updatePowerUpHud()
+  loadLevel(0)
+}
+
+let highlighted = false
+
 const clock = new THREE.Clock()
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05)
+
+  if (input.wasPressed('Escape')) {
+    if (menu.isOpen) {
+      menu.close()
+    } else {
+      if (state === 'charging') {
+        sfx.chargeEnd()
+        charge = 0
+        state = 'aiming'
+      }
+      menu.open()
+    }
+  }
+  if (menu.isOpen) {
+    // Game frozen behind the menu; clouds keep drifting for life
+    effects.update(dt)
+    renderer.render(scene, camera)
+    input.endFrame()
+    return
+  }
+
+  // Hold H to preview crate status (red = down, green = standing)
+  const wantHighlight = input.isDown('KeyH') &&
+    (state === 'aiming' || state === 'charging')
+  if (wantHighlight !== highlighted) {
+    highlighted = wantHighlight
+    if (highlighted) crateField.showHitFeedback()
+    else crateField.clearHitFeedback()
+  }
 
   switch (state) {
     case 'aiming':

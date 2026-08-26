@@ -18,6 +18,11 @@ motion. It's harder than it looks. That's part of the charm.
 | **Hold SPACE** | Charge the throw — watch the yellow ring slide downrange |
 | **Release SPACE** | Let it fly |
 | **ENTER** | Continue after a victory (or a humbling defeat) |
+| **Hold H** | Scout the crates — red are down, green still stand |
+| **ESC** | Pause menu: music & sfx volume, or start over |
+
+Botched your first shot? **ESC + ENTER** starts the game over instantly —
+no judgment.
 
 The yellow ring on the grass shows exactly where your shot will land.
 Trust the ring. The ring is wise.

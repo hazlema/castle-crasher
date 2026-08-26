@@ -1,7 +1,9 @@
 // All game audio is synthesized — no asset files. The AudioContext is
 // created on the first keydown to satisfy browser autoplay policy.
-const MASTER_VOLUME = 0.5
+const DEFAULT_VOLUME = 0.5
+const VOLUME_KEY = 'sfx-volume'
 
+let volume = Number(localStorage.getItem(VOLUME_KEY) ?? DEFAULT_VOLUME)
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let noise: AudioBuffer | null = null
@@ -10,12 +12,22 @@ addEventListener('keydown', () => {
   if (ctx) return
   ctx = new AudioContext()
   master = ctx.createGain()
-  master.gain.value = MASTER_VOLUME
+  master.gain.value = volume
   master.connect(ctx.destination)
   noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate)
   const data = noise.getChannelData(0)
   for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
 })
+
+export function getSfxVolume() {
+  return volume
+}
+
+export function setSfxVolume(v: number) {
+  volume = Math.min(1, Math.max(0, v))
+  localStorage.setItem(VOLUME_KEY, String(volume))
+  if (master) master.gain.value = volume
+}
 
 interface ToneOpts {
   type?: OscillatorType

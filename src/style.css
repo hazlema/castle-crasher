@@ -60,3 +60,25 @@ canvas { display: block; }
   animation: float-up 1.5s ease-out forwards; }
 @keyframes float-up {
   to { opacity: 0; transform: translate(-50%, -140px); } }
+#menu { position: fixed; inset: 0; display: none; align-items: center;
+  justify-content: center; background: rgba(0, 0, 0, .45); }
+#menu.show { display: flex; }
+#menu-panel { min-width: 340px; padding: 22px 26px; text-align: center;
+  color: #fff; background: rgba(12, 12, 12, .9);
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-radius: 10px; box-shadow: 0 12px 40px rgba(0, 0, 0, .6);
+  animation: banner-in .3s cubic-bezier(.2, 1.6, .4, 1); }
+#menu-title { font: bold 30px Georgia, serif; margin-bottom: 14px; }
+.menu-row { display: flex; align-items: center; justify-content:
+  space-between; gap: 18px; padding: 9px 12px; margin: 4px 0;
+  font: 18px Georgia, serif; border-left: 4px solid transparent;
+  border-radius: 6px; }
+.menu-row.sel { border-left-color: #ffd54a; background:
+  rgba(255, 213, 74, .12); }
+.menu-slider { position: relative; width: 130px; height: 8px;
+  border-radius: 4px; background: rgba(255, 255, 255, .2);
+  overflow: hidden; display: inline-block; }
+.menu-slider-fill { position: absolute; left: 0; top: 0; bottom: 0;
+  background: #ffd54a; }
+#menu-hint { margin-top: 14px; font: 13px system-ui, sans-serif;
+  opacity: .7; }

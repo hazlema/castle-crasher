@@ -7,8 +7,22 @@ const files = Object.values(import.meta.glob(
   { eager: true, query: '?url', import: 'default' },
 )) as string[]
 
-const MUSIC_VOLUME = 0.35
+const DEFAULT_VOLUME = 0.35
+const VOLUME_KEY = 'music-volume'
 const LAST_KEY = 'music-last-track'
+
+let volume = Number(localStorage.getItem(VOLUME_KEY) ?? DEFAULT_VOLUME)
+let currentAudio: HTMLAudioElement | null = null
+
+export function getMusicVolume() {
+  return volume
+}
+
+export function setMusicVolume(v: number) {
+  volume = Math.min(1, Math.max(0, v))
+  localStorage.setItem(VOLUME_KEY, String(volume))
+  if (currentAudio) currentAudio.volume = volume
+}
 
 function shuffled(list: string[]): string[] {
   const out = [...list]
@@ -29,7 +43,8 @@ export function startMusic() {
     }
     let index = 0
     const audio = new Audio()
-    audio.volume = MUSIC_VOLUME
+    currentAudio = audio
+    audio.volume = volume
     const playNext = () => {
       audio.src = queue[index]
       localStorage.setItem(LAST_KEY, queue[index])
