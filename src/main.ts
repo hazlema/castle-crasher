@@ -182,8 +182,8 @@ renderer.setAnimationLoop(() => {
 
   switch (state) {
     case 'aiming':
-      if (input.isDown('ArrowLeft')) trebuchet.aim(1.2 * dt)
-      if (input.isDown('ArrowRight')) trebuchet.aim(-1.2 * dt)
+      if (input.isDown('ArrowLeft')) trebuchet.aim(0.5 * dt)
+      if (input.isDown('ArrowRight')) trebuchet.aim(-0.5 * dt)
       if (input.isDown('Space')) {
         state = 'charging'
         charge = 0
