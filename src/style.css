@@ -110,5 +110,5 @@ canvas { display: block; }
   top: calc(60px + env(safe-area-inset-top)); width: 48px; height: 48px;
   font-size: 20px; border-radius: 12px; }
 .touch #help { display: none; }
-.touch #power-wrap { bottom: calc(116px + env(safe-area-inset-bottom));
-  width: min(320px, 44vw); }
+.touch #power-wrap { bottom: calc(10px + env(safe-area-inset-bottom));
+  width: min(320px, 34vw); }
