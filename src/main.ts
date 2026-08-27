@@ -8,6 +8,7 @@ import { LEVELS } from './levels'
 import { hud } from './hud'
 import { input } from './input'
 import { PauseMenu } from './menu'
+import { TouchControls } from './touch'
 import { AimMarker } from './aim-marker'
 import { sfx } from './sfx'
 import { startMusic } from './music'
@@ -182,6 +183,7 @@ loadLevel(startLevel - 1)
 startMusic()
 
 const menu = new PauseMenu()
+TouchControls.attach()
 menu.onRestart = () => {
   nextShot = {}
   onContinue = null

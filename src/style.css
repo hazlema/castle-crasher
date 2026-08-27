@@ -62,7 +62,7 @@ canvas { display: block; }
   to { opacity: 0; transform: translate(-50%, -140px); } }
 #menu { position: fixed; inset: 0; display: none; align-items: center;
   justify-content: center; background: rgba(0, 0, 0, .45); }
-#menu.show { display: flex; }
+#menu.show { display: flex; pointer-events: auto; }
 #menu-panel { min-width: 340px; padding: 22px 26px; text-align: center;
   color: #fff; background: rgba(12, 12, 12, .9);
   border: 1px solid rgba(255, 255, 255, .28);
@@ -82,3 +82,33 @@ canvas { display: block; }
   background: #ffd54a; }
 #menu-hint { margin-top: 14px; font: 13px system-ui, sans-serif;
   opacity: .7; }
+
+/* ---- touch controls (only mounted on coarse-pointer devices) ---- */
+#touch-controls { position: fixed; inset: 0; pointer-events: none;
+  font-family: system-ui, sans-serif; z-index: 10; }
+.tc-btn { position: absolute; pointer-events: auto; border: 2px solid
+  rgba(255, 255, 255, .5); border-radius: 50%; color: #fff;
+  background: rgba(12, 12, 12, .55); font-size: 26px; font-weight: bold;
+  width: 64px; height: 64px; display: flex; align-items: center;
+  justify-content: center; touch-action: none; user-select: none;
+  -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .8); }
+.tc-btn:active { background: rgba(255, 213, 74, .45);
+  border-color: #ffd54a; }
+.tc-left  { left: max(20px, env(safe-area-inset-left));
+  bottom: calc(24px + env(safe-area-inset-bottom)); }
+.tc-right { left: calc(max(20px, env(safe-area-inset-left)) + 76px);
+  bottom: calc(24px + env(safe-area-inset-bottom)); }
+.tc-fire  { right: max(20px, env(safe-area-inset-right));
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  width: 84px; height: 84px; font-size: 18px; letter-spacing: 1px; }
+.tc-check { right: calc(max(20px, env(safe-area-inset-right)) + 96px);
+  bottom: calc(34px + env(safe-area-inset-bottom)); }
+.tc-enter { right: max(20px, env(safe-area-inset-right));
+  bottom: calc(124px + env(safe-area-inset-bottom)); }
+.tc-menu  { right: max(16px, env(safe-area-inset-right));
+  top: calc(60px + env(safe-area-inset-top)); width: 48px; height: 48px;
+  font-size: 20px; border-radius: 12px; }
+.touch #help { display: none; }
+.touch #power-wrap { bottom: calc(116px + env(safe-area-inset-bottom));
+  width: min(320px, 44vw); }

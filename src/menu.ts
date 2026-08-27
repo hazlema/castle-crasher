@@ -75,6 +75,14 @@ export class PauseMenu {
     for (const [i, item] of this.items.entries()) {
       const row = document.createElement('div')
       row.className = i === this.index ? 'menu-row sel' : 'menu-row'
+      // Touch support: tap selects a row and runs its action; slider
+      // rows are then adjusted with the on-screen ◀ ▶ buttons.
+      row.addEventListener('pointerdown', (e) => {
+        e.preventDefault()
+        this.index = i
+        item.action?.()
+        if (this.opened) this.render()
+      })
       const label = document.createElement('span')
       label.textContent = item.label
       row.append(label)
