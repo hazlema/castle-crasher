@@ -37,13 +37,36 @@ The main menu offers three vibes instead of easy/medium/hard:
 
 | Menu choice | Music pool | Difficulty preset |
 |---|---|---|
-| Chill | `music/chill/` | generous shots, simple structures, nothing moves |
+| Chill | `music/chill/` | generous shots, simple structures, forgiving physics |
 | Heart-Pumper | `music/heartpumper/` | tighter shots, taller structures |
-| Hardcore | `music/hardcore/` | minimal shots, complex structures |
+| Hardcore | `music/hardcore/` | minimal shots, complex structures, stubborn physics |
 
 Depth level: **vibe + preset** (music selects playlist and difficulty
 knobs; gameplay itself is not beat-synced — explicitly decided against
 music-reactive and rhythm-hybrid variants).
+
+Crates themselves **never move on their own** at any tier — difficulty
+comes from structure design and physics tuning, not moving targets.
+(A moving *platform* under a structure is a v2 idea at most.)
+
+### Difficulty presets as Resources
+Tier tuning lives in a custom `DifficultyPreset` Resource
+(`extends Resource` with `@export` vars), one `.tres` per tier:
+
+```gdscript
+# difficulty_preset.gd
+class_name DifficultyPreset extends Resource
+@export var crate_natural_bounce := 0.6   # chill 0.6 → hardcore 0.3
+@export var impact_force := 3.0           # chill 3.0 → hardcore 1.0
+@export var shots_per_level := 5
+# ...grows as tuning needs emerge
+```
+
+The menu choice loads the matching `.tres` into a global autoload
+(`Settings`), so every system reads `Settings.preset.impact_force`.
+Values are editable with inspector sliders and hot-tweakable at
+runtime. Per-level overrides, if ever needed, are just another
+`DifficultyPreset` resource assigned on the level scene.
 
 ### 2. Lean bonus
 When a shot leaves a crate *leaning* against another (tilted roughly
@@ -53,10 +76,11 @@ paid-out crate pairs. Rewards near-misses and emergent physics instead
 of punishing them.
 
 ### 3. Roaming bonus critter
-One wandering critter per level (skunk, chicken — one species per level,
-more later). Optional target, never required to clear the level. Hitting
-it grants a bonus powerup plus a signature eye-candy burst (feathers /
-stink cloud). Simple path-walk AI with a 2-frame waddle.
+One wandering critter on **every level, at every tier** (skunk,
+chicken — one species per level, more later). Optional target, never
+required to clear the level. Hitting it grants a bonus powerup plus a
+signature eye-candy burst (feathers / stink cloud). Simple path-walk
+AI with a 2-frame waddle.
 
 ### 4. Living world
 Painted panorama backgrounds (reuse the v1 21:9 art pipeline) sliced
@@ -100,7 +124,8 @@ building content breadth.
 
 **Explicitly v2 (wanted, not now):** wind, multiple ammo types, the
 rich HUD from the 2.5D mockup (round counter, opponent panels), PvP,
-additional critter species, level editor.
+additional critter species, level editor, moving platforms under
+structures (crates themselves never self-move even then).
 
 ## Asset Pipeline Notes
 
