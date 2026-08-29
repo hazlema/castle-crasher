@@ -1,4 +1,4 @@
-# Castle Crasher: Godot Reimagining — Design
+# Kingdom Crumble — Design
 
 **Date:** 2026-08-29
 **Status:** Approved design, pre-implementation
@@ -6,10 +6,16 @@
 
 ## Concept
 
-A 2D indie artillery/destruction game in the Angry Birds lineage: launch
-stones from a trebuchet, topple crate structures, charm the player.
-Target the orphaned Angry Birds audience with better music, richer
-personality, and physics rewards no one else offers.
+**Kingdom Crumble** — a 2D indie artillery/destruction game in the Angry
+Birds lineage: launch stones from a trebuchet, topple crate structures,
+charm the player. Target the orphaned Angry Birds audience with better
+music, richer personality, and physics rewards no one else offers.
+
+Name notes: "Castle Crasher" was rejected (collides with The Behemoth's
+*Castle Crashers*). Nearest neighbor to the chosen name is *Thy Kingdom
+Crumble* (small 2019 Steam platformer) — different genre and low
+profile, judged acceptable; run a trademark search before any real
+store launch.
 
 **Pillars: super fun, pretty (animation eye-candy / design), challenging.**
 
