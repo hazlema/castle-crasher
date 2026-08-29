@@ -75,12 +75,29 @@ settles), a powerup pops out. Each formed lean pays **once** — track
 paid-out crate pairs. Rewards near-misses and emergent physics instead
 of punishing them.
 
-### 3. Roaming bonus critter
-One wandering critter on **every level, at every tier** (skunk,
-chicken — one species per level, more later). Optional target, never
-required to clear the level. Hitting it grants a bonus powerup plus a
-signature eye-candy burst (feathers / stink cloud). Simple path-walk
-AI with a 2-frame waddle.
+### 3. Progressive elements (the retention engine)
+Level 1 is pure basics — trebuchet, crates, nothing else. Every few
+levels a **new element** enters and stays in the rotation, so the game
+keeps surprising (the Cut the Rope / Angry Birds onboarding model).
+Candidate element pool, in rough introduction order:
+
+- **Roaming critters** (skunk, chicken) — optional bonus targets;
+  hitting one grants a powerup + signature eye-candy burst (feathers /
+  stink cloud). Simple path-walk AI with a 2-frame waddle.
+- **The Frog King** 🐸👑 — a recurring cameo (roughly every couple of
+  levels once introduced): a crowned frog with scepter and cloak
+  appears somewhere in the scene. Hitting him "does something" —
+  deliberately mysterious, effects can vary (jackpot powerup, confetti
+  storm, maybe an occasional royal curse). Players should trade rumors
+  about him. Character already comped.
+- **Obstacles** — terrain and props that block or redirect shots.
+- **Water** — hazard pools / splashdown physics.
+- **Weather** — rain and snow (visual + light physics flavor).
+- **Wind** — promoted from the v2 bucket into the element pool; enters
+  late as the aim-skill multiplier.
+
+Elements are introduced by level design, not difficulty tier — all
+tiers meet the same elements; the preset tunes how punishing they are.
 
 ### 4. Living world
 Painted panorama backgrounds (reuse the v1 21:9 art pipeline) sliced
@@ -117,15 +134,17 @@ pattern carries over conceptually).
 
 ## Scope Guardrail
 
-**First playable:** one level, one music tier (chill), one critter, the
-kid + trebuchet rigged and firing, flat-color placeholder art, all three
-camera modes. Prove fun/pretty/challenging on one screen before
-building content breadth.
+**First playable:** one level, one music tier (chill), the kid +
+trebuchet rigged and firing, flat-color placeholder art, all three
+camera modes. No elements yet — level 1 is pure basics by design.
+Prove fun/pretty/challenging on one screen before building content
+breadth. First element (a critter) arrives with the first level batch.
 
-**Explicitly v2 (wanted, not now):** wind, multiple ammo types, the
-rich HUD from the 2.5D mockup (round counter, opponent panels), PvP,
-additional critter species, level editor, moving platforms under
-structures (crates themselves never self-move even then).
+**Explicitly v2 (wanted, not now):** multiple ammo types, the rich HUD
+from the 2.5D mockup (round counter, opponent panels), PvP, level
+editor, moving platforms under structures (crates themselves never
+self-move even then). Water/weather/wind graduated into the
+progressive-element pool above.
 
 ## Asset Pipeline Notes
 
